@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3ステップシミュレーション</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        label, button {
+            display: block;
+            margin: 10px 0;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .small-input {
+            width: 80px;
+            padding: 4px;
+            box-sizing: border-box;
+        }
+        .result {
+            margin-top: 20px;
+            font-weight: bold;
+            display: none; /* 初期状態で非表示 */
+        }
+        .gift-tax {
+            color: #06AED5; /* ライトブルー */
+        }
+        .inheritance-tax {
+            color: #90BE6D; /* グリーン */
+        }
+        .savings-tax {
+            color: #F94144; /* レッド */
+        }
+        .profit {
+            color: #0466C8; /* ブルー */
+        }
+        .total-profit {
+            color: #0466C8; /* ブルー */
+        }
+        .total-profit-value {
+            color: #F94144; /* レッド */
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f9f9f9;
+        }
+        th.profit {
+            color: #0466C8; /* ブルー */
+        }
+        th.savings {
+            color: #F94144; /* レッド */
+        }
+        td.profit {
+            color: #0466C8; /* ブルー */
+        }
+        td.savings {
+            color: #F94144; /* レッド */
+        }
+        .header-custom {
+            display: inline;
+        }
+        .header-custom .profit {
+            color: #0466C8; /* 青 */
+        }
+        .header-custom .plus {
+            color: black; /* 黒 */
+        }
+        .header-custom .savings {
+            color: #F94144; /* 赤 */
+        }
+    </style>
+</head>
+<body>
+    <h1>3ステップシミュレーション（株価にフォーカスした場合の概算値）</h1>
+    <label for="stockValue">株価評価額を入力してください:</label>
+    <div class="input-group">
+        <input type="text" id="stockValue" placeholder="例: 3,000,000">
+        <span>円</span>
+    </div>
+    <button onclick="calculateTaxes()">計算する</button>
+    <div class="result" id="giftTaxContainer">
+        <span class="gift-tax">贈与税額:</span> <span class="gift-tax" id="giftTaxResult">〇円</span>
+    </div>
+    <div class="result" id="inheritanceTaxContainer">
+        <span class="inheritance-tax">相続税額:</span> <span class="inheritance-tax" id="inheritanceTaxResult">〇円</span>
+    </div>
+    <div class="result" id="savingsTaxContainer">
+        <span class="savings-tax">節税額:</span> <span class="savings-tax" id="savingsResult">〇円</span>
+    </div>
+    <div class="result" id="compoundInterestSection" style="display: none;">
+        <p>元金<span id="principalAmount" class="gift-tax">〇</span>円で複利
+            <input type="text" id="interestRate" class="small-input" placeholder="例: 5">％としたときの運用益</p>
+        <button onclick="calculateCompoundInterest()">計算する</button>
+        <div id="compoundInterestResult"></div>
+    </div>
+
+    <script>
+        function toHalfWidth(str) {
+            return str.replace(/[０-９．]/g, function(ch) {
+                return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
+            });
+        }
+
+        function formatWithCommas(number) {
+            return number.toLocaleString();
+        }
+
+        let giftTaxGlobal = 0;
+        let savingsGlobal = 0;
+
+        function calculateGiftTax(stockValue) {
+            let giftTax = 0;
+            if (stockValue <= 200000) {
+                giftTax = stockValue * 0.1;
+            } else if (stockValue <= 400000) {
+                giftTax = stockValue * 0.15 - 100000;
+            } else if (stockValue <= 600000) {
+                giftTax = stockValue * 0.2 - 300000;
+            } else if (stockValue <= 1000000) {
+                giftTax = stockValue * 0.3 - 900000;
+            } else if (stockValue <= 1500000) {
+                giftTax = stockValue * 0.4 - 1900000;
+            } else if (stockValue <= 3000000) {
+                giftTax = stockValue * 0.45 - 2650000;
+            } else if (stockValue <= 4500000) {
+                giftTax = stockValue * 0.5 - 4150000;
+            } else {
+                giftTax = stockValue * 0.55 - 6400000;
+            }
+            return Math.round(giftTax);
+        }
+
+        function calculateInheritanceTax(stockValue) {
+            let inheritanceTax = 0;
+            if (stockValue <= 10000000) {
+                inheritanceTax = stockValue * 0.1;
+            } else if (stockValue <= 30000000) {
+                inheritanceTax = stockValue * 0.15 - 500000;
+            } else if (stockValue <= 50000000) {
+                inheritanceTax = stockValue * 0.2 - 2000000;
+            } else if (stockValue <= 100000000) {
+                inheritanceTax = stockValue * 0.3 - 7000000;
+            } else if (stockValue <= 200000000) {
+                inheritanceTax = stockValue * 0.4 - 17000000;
+            } else if (stockValue <= 300000000) {
+                inheritanceTax = stockValue * 0.45 - 27000000;
+            } else if (stockValue <= 600000000) {
+                inheritanceTax = stockValue * 0.5 - 42000000;
+            } else {
+                inheritanceTax = stockValue * 0.55 - 72000000;
+            }
+            return Math.round(inheritanceTax);
+        }
+
+        function calculateTaxes() {
+            let inputValue = document.getElementById('stockValue').value;
+            inputValue = toHalfWidth(inputValue).replace(/,/g, '');
+
+            const stockValue = parseFloat(inputValue);
+
+            if (isNaN(stockValue) || stockValue <= 0) {
+                alert("正しい金額を入力してください。");
+                return;
+            }
+
+            const giftTax = calculateGiftTax(stockValue);
+            giftTaxGlobal = giftTax;
+            document.getElementById('giftTaxResult').textContent = `${formatWithCommas(giftTax)}円`;
+
+            const inheritanceTax = calculateInheritanceTax(stockValue);
+            document.getElementById('inheritanceTaxResult').textContent = `${formatWithCommas(inheritanceTax)}円`;
+
+            const savings = giftTax - inheritanceTax;
+            savingsGlobal = savings;
+            document.getElementById('savingsResult').textContent = `${formatWithCommas(savings)}円`;
+
+            document.getElementById('principalAmount').textContent = formatWithCommas(giftTax);
+
+            document.getElementById('giftTaxContainer').style.display = "block";
+            document.getElementById('inheritanceTaxContainer').style.display = "block";
+            document.getElementById('savingsTaxContainer').style.display = "block";
+
+            document.getElementById('compoundInterestSection').style.display = "block";
+        }
+
+        function calculateCompoundInterest() {
+            const interestRateInput = document.getElementById('interestRate').value;
+            const interestRate = parseFloat(toHalfWidth(interestRateInput));
+
+            if (isNaN(interestRate) || interestRate <= 0) {
+                document.getElementById('compoundInterestResult').textContent = "正しい利率を入力してください。";
+                return;
+            }
+
+            let resultHTML = `
+                <table>
+                    <tr>
+                        <th>年数</th>
+                        <th>残高</th>
+                        <th class="profit">運用益</th>
+                        <th class="savings">
+                            <span class="header-custom">
+                                <span class="profit">運用益</span>
+                                <span class="plus">＋</span>
+                                <span class="savings">節税額</span>
+                            </span>
+                        </th>
+                    </tr>
+            `;
+            for (let year = 0; year <= 30; year++) {
+                const balance = giftTaxGlobal * Math.pow(1 + interestRate / 100, year);
+                const profit = balance - giftTaxGlobal;
+                const totalWithSavings = profit + savingsGlobal;
+                resultHTML += `
+                    <tr>
+                        <td>${year}</td>
+                        <td>${formatWithCommas(Math.round(balance))}円</td>
+                        <td class="profit">${formatWithCommas(Math.round(profit))}円</td>
+                        <td class="savings">${formatWithCommas(Math.round(totalWithSavings))}円</td>
+                    </tr>
+                `;
+            }
+            resultHTML += "</table>";
+
+            document.getElementById('compoundInterestResult').innerHTML = resultHTML;
+        }
+    </script>
+</body>
+</html>
