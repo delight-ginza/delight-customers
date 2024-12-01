@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>複利計算シミュレーション</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .input-group {
+            margin: 10px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="text"] {
+            padding: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 20px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <h1>複利計算シミュレーション</h1>
+    <div class="input-group">
+        <label for="principal">元金（円）を入力してください:</label>
+        <input type="text" id="principal" placeholder="例: 1,000,000">
+    </div>
+    <div class="input-group">
+        <label for="interestRate">複利（％）を入力してください:</label>
+        <input type="text" id="interestRate" placeholder="例: 5">
+    </div>
+    <button onclick="calculateCompoundInterest()">計算する</button>
+
+    <div id="compoundInterestResult"></div>
+
+    <script>
+        function toHalfWidth(str) {
+            return str.replace(/[０-９．]/g, function(ch) {
+                return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
+            });
+        }
+
+        function formatWithCommas(number) {
+            return number.toLocaleString();
+        }
+
+        function calculateCompoundInterest() {
+            const principalInput = document.getElementById('principal').value;
+            const interestRateInput = document.getElementById('interestRate').value;
+
+            const principal = parseFloat(toHalfWidth(principalInput.replace(/,/g, '')));
+            const interestRate = parseFloat(toHalfWidth(interestRateInput));
+
+            if (isNaN(principal) || principal <= 0 || isNaN(interestRate) || interestRate <= 0) {
+                alert("正しい元金と複利の値を入力してください。");
+                return;
+            }
+
+            let resultHTML = `
+                <table>
+                    <tr>
+                        <th>年数</th>
+                        <th>残高</th>
+                        <th>運用益</th>
+                    </tr>
+            `;
+
+            for (let year = 0; year <= 30; year++) {
+                const balance = principal * Math.pow(1 + interestRate / 100, year);
+                const profit = balance - principal;
+                resultHTML += `
+                    <tr>
+                        <td>${year}</td>
+                        <td>${formatWithCommas(Math.round(balance))}円</td>
+                        <td>${formatWithCommas(Math.round(profit))}円</td>
+                    </tr>
+                `;
+            }
+
+            resultHTML += `</table>`;
+            document.getElementById('compoundInterestResult').innerHTML = resultHTML;
+        }
+    </script>
+</body>
+</html>
