@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3ステップシミュレーション（相続税手入力）</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        label, button {
+            display: block;
+            margin: 10px 0;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 8px 16px;
+            font-size: 16px;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #e0e0e0;
+        }
+        .result {
+            margin-top: 20px;
+            font-weight: bold;
+            display: none;
+        }
+        .result p {
+            margin: 5px 0;
+        }
+        .green {
+            color: #90BE6D;
+        }
+        .blue {
+            color: #06AED5;
+        }
+        .red {
+            color: #F94144;
+        }
+        .profit {
+            color: #0466C8;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: center;
+            font-weight: bold;
+        }
+        th {
+            background-color: #f9f9f9;
+        }
+        #chartContainer {
+            margin-top: 40px;
+            width: 100%;
+            max-width: 800px;
+        }
+    </style>
+</head>
+<body>
+    <h1>3ステップシミュレーション（相続税手入力）</h1>
+
+    <label for="stockValue">株価評価額を入力してください:</label>
+    <div class="input-group">
+        <input type="text" id="stockValue" placeholder="例: 20,000,000">
+        <span>円</span>
+    </div>
+
+    <label for="inheritanceTax">相続税額を入力してください:</label>
+    <div class="input-group">
+        <input type="text" id="inheritanceTax" placeholder="例: 6,300,000">
+        <span>円</span>
+    </div>
+
+    <button onclick="calculate()">計算する</button>
+
+    <div class="result" id="resultsContainer">
+        <p><strong class="green">相続税額:</strong> <span id="inheritanceTaxResult" class="green">-</span> <span class="green">円</span></p>
+        <p><strong class="blue">贈与税額:</strong> <span id="giftTaxResult" class="blue">-</span> <span class="blue">円</span></p>
+        <p><strong class="red">節税額:</strong> <span id="savingsResult" class="red">-</span> <span class="red">円</span></p>
+
+        <div id="compoundInterestSection" class="result">
+            <p>元金 <span id="principalAmount" class="blue">-</span>
+                <span class="blue">円</span> で複利
+                <div class="input-group">
+                    <input type="text" id="interestRate" placeholder="例: 2">
+                    <span>%</span>
+                </div>
+                としたときの運用益
+            </p>
+            <button onclick="calculateCompoundInterest()">計算する</button>
+        </div>
+    </div>
+
+    <table id="compoundInterestTable" style="display: none;">
+        <tr>
+            <th>年数</th>
+            <th>残高</th>
+            <th class="profit">運用益</th>
+            <th class="red">運用益 + 節税額</th>
+        </tr>
+    </table>
+
+    <div id="chartContainer">
+        <canvas id="chart"></canvas>
+    </div>
+
+    <script>
+        let globalGiftTax = 0;
+        let globalSavings = 0;
+
+        function toHalfWidth(str) {
+            return str.replace(/[０-９．]/g, function(ch) {
+                return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
+            });
+        }
+
+        function calculateGiftTax(stockValue) {
+            let giftTax = 0;
+            if (stockValue <= 200000) {
+                giftTax = stockValue * 0.1;
+            } else if (stockValue <= 400000) {
+                giftTax = stockValue * 0.15 - 100000;
+            } else if (stockValue <= 600000) {
+                giftTax = stockValue * 0.2 - 300000;
+            } else if (stockValue <= 1000000) {
+                giftTax = stockValue * 0.3 - 900000;
+            } else if (stockValue <= 1500000) {
+                giftTax = stockValue * 0.4 - 1900000;
+            } else if (stockValue <= 3000000) {
+                giftTax = stockValue * 0.45 - 2650000;
+            } else if (stockValue <= 4500000) {
+                giftTax = stockValue * 0.5 - 4150000;
+            } else {
+                giftTax = stockValue * 0.55 - 6400000;
+            }
+            return Math.round(giftTax);
+        }
+
+        function calculate() {
+            const stockValueInput = document.getElementById('stockValue').value;
+            const inheritanceTaxInput = document.getElementById('inheritanceTax').value;
+
+            const stockValue = parseFloat(toHalfWidth(stockValueInput.replace(/,/g, '')));
+            const inheritanceTax = parseFloat(toHalfWidth(inheritanceTaxInput.replace(/,/g, '')));
+
+            if (isNaN(stockValue) || stockValue <= 0) {
+                alert("正しい株価評価額を入力してください。");
+                return;
+            }
+
+            if (isNaN(inheritanceTax) || inheritanceTax < 0) {
+                alert("正しい相続税額を入力してください。");
+                return;
+            }
+
+            const giftTax = calculateGiftTax(stockValue);
+            const savings = giftTax - inheritanceTax;
+
+            globalGiftTax = giftTax;
+            globalSavings = savings;
+
+            document.getElementById('inheritanceTaxResult').textContent = inheritanceTax.toLocaleString();
+            document.getElementById('giftTaxResult').textContent = giftTax.toLocaleString();
+            document.getElementById('savingsResult').textContent = savings.toLocaleString();
+            document.getElementById('principalAmount').textContent = giftTax.toLocaleString();
+
+            document.getElementById('resultsContainer').style.display = "block";
+            document.getElementById('compoundInterestSection').style.display = "block";
+        }
+
+        function calculateCompoundInterest() {
+            const interestRateInput = document.getElementById('interestRate').value;
+            const interestRate = parseFloat(toHalfWidth(interestRateInput.replace(/,/g, '')));
+
+            if (isNaN(interestRate) || interestRate <= 0) {
+                alert("正しい利率を入力してください。");
+                return;
+            }
+
+            const table = document.getElementById('compoundInterestTable');
+            let tableHTML = `
+                <tr>
+                    <th>年数</th>
+                    <th>残高</th>
+                    <th class="profit">運用益</th>
+                    <th class="red">運用益 + 節税額</th>
+                </tr>
+            `;
+
+            const balances = [];
+            const profits = [];
+            const totalProfits = [];
+            for (let year = 0; year <= 30; year++) {
+                const balance = globalGiftTax * Math.pow(1 + interestRate / 100, year);
+                const profit = balance - globalGiftTax;
+                const totalProfit = profit + globalSavings;
+
+                balances.push(balance);
+                profits.push(profit);
+                totalProfits.push(totalProfit);
+
+                tableHTML += `
+                    <tr>
+                        <td>${year}</td>
+                        <td>${Math.round(balance).toLocaleString()}円</td>
+                        <td class="profit">${Math.round(profit).toLocaleString()}円</td>
+                        <td class="red">${Math.round(totalProfit).toLocaleString()}円</td>
+                    </tr>
+                `;
+            }
+
+            table.innerHTML = tableHTML;
+            table.style.display = "table";
+
+            drawChart(balances, profits, totalProfits);
+        }
+
+        function drawChart(balances, profits, totalProfits) {
+            const ctx = document.getElementById('chart').getContext('2d');
+            const years = Array.from({ length: 31 }, (_, i) => i);
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: years,
+                    datasets: [
+                        {
+                            label: '残高',
+                            data: balances,
+                            borderColor: 'black',
+                            fill: false,
+                        },
+                        {
+                            label: '運用益',
+                            data: profits,
+                            borderColor: '#0466C8',
+                            fill: false,
+                        },
+                        {
+                            label: '運用益 + 節税額',
+                            data: totalProfits,
+                            borderColor: '#F94144',
+                            fill: false,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(tooltipItem) {
+                                    return tooltipItem.dataset.label + ': ' + tooltipItem.raw.toLocaleString() + ' 円';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: '年数',
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: '金額 (円)',
+                            }
+                        }
+                    },
+                }
+            });
+        }
+    </script>
+</body>
+</html>
