@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>評価額・贈与税・相続税の変化</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            text-align: left;
+        }
+        .input-container {
+            margin: 20px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #f0f0f0;
+            color: #333;
+            border: 1px solid #ccc;
+            font-size: 16px;
+            cursor: pointer;
+            text-align: center;
+            width: auto;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #e0e0e0;
+        }
+        table {
+            margin-top: 20px;
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .light-blue {
+            color: #06AED5; /* ライトブルー */
+        }
+        .green {
+            color: #90BE6D; /* グリーン */
+        }
+        canvas {
+            margin-top: 30px;
+        }
+        #result-container {
+            display: none; /* 最初は非表示 */
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+</head>
+<body>
+    <h1>評価額・贈与税・相続税の変化</h1>
+    <div class="input-container">
+        <label for="stock-value">株価評価額を入力してください:</label>
+        <input type="text" id="stock-value" placeholder="例: 20,000,000">
+        <button onclick="populateTableAndDrawChart()">計算する</button>
+    </div>
+
+    <!-- 結果表示領域 -->
+    <div id="result-container">
+        <table>
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>株価評価額</th>
+                    <th class="light-blue">株価評価減</th>
+                    <th class="light-blue">贈与税額</th>
+                    <th>贈与税減少額</th>
+                    <th>贈与税減少率</th>
+                    <th class="green">G列</th>
+                    <th class="green">相続税額</th>
+                    <th>相続税減少額</th>
+                    <th>相続税減少率</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <!-- 行はJavaScriptで動的に作成されます -->
+            </tbody>
+        </table>
+        <canvas id="chartCanvas" width="800" height="400"></canvas>
+    </div>
+
+    <script>
+        function populateTableAndDrawChart() {
+            let stockValue = document.getElementById('stock-value').value;
+            stockValue = stockValue.replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 65248));
+            stockValue = parseFloat(stockValue.replace(/,/g, ''));
+
+            if (isNaN(stockValue) || stockValue <= 0) {
+                alert('正しい株価評価額を入力してください。');
+                return;
+            }
+
+            const downRates = [1, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6];
+            const downLabels = ["0%", "-5%", "-10%", "-15%", "-20%", "-25%", "-30%", "-35%", "-40%"];
+            const giftTaxReductionRates = [];
+            const inheritanceTaxReductionRates = [];
+            const gColumnValues = [];
+
+            const tableBody = document.getElementById('table-body');
+            tableBody.innerHTML = "";
+
+            let baseGiftTax = 0;
+            let baseInheritanceTax = 0;
+
+            for (let i = 0; i < downRates.length; i++) {
+                const row = tableBody.insertRow();
+                const adjustedValue = stockValue * downRates[i];
+                const giftTaxValue = calculateGiftTax(adjustedValue);
+                const inheritanceTaxValue = calculateInheritanceTax(adjustedValue);
+
+                if (i === 0) {
+                    baseGiftTax = giftTaxValue;
+                    baseInheritanceTax = inheritanceTaxValue;
+                }
+
+                const giftTaxReductionRate = -(1 - giftTaxValue / baseGiftTax) * 100;
+                const inheritanceTaxReductionRate = -(1 - inheritanceTaxValue / baseInheritanceTax) * 100;
+
+                giftTaxReductionRates.push(giftTaxReductionRate);
+                inheritanceTaxReductionRates.push(inheritanceTaxReductionRate);
+
+                const gValue = (1 - giftTaxReductionRate / 100) * 100;
+                gColumnValues.push(gValue);
+
+                row.insertCell().textContent = downLabels[i];
+                row.insertCell().textContent = `¥${Math.round(adjustedValue).toLocaleString()}`;
+                row.insertCell().innerHTML = `<span class="light-blue">${downLabels[i]}</span>`;
+                row.insertCell().innerHTML = `<span class="light-blue">¥${Math.round(giftTaxValue).toLocaleString()}</span>`;
+                row.insertCell().textContent = `¥${Math.round(baseGiftTax - giftTaxValue).toLocaleString()}`;
+                row.insertCell().textContent = `${giftTaxReductionRate.toFixed(2)}%`;
+                row.insertCell().innerHTML = `<span class="green">${gValue.toFixed(2)}%</span>`;
+                row.insertCell().innerHTML = `<span class="green">¥${Math.round(inheritanceTaxValue).toLocaleString()}</span>`;
+                row.insertCell().textContent = `¥${Math.round(baseInheritanceTax - inheritanceTaxValue).toLocaleString()}`;
+                row.insertCell().textContent = `${inheritanceTaxReductionRate.toFixed(2)}%`;
+            }
+
+            drawChart(downLabels, giftTaxReductionRates, inheritanceTaxReductionRates);
+
+            // 計算後に結果表示
+            document.getElementById('result-container').style.display = 'block';
+        }
+
+        function calculateGiftTax(value) {
+            if (value <= 2000000) return value * 0.1;
+            if (value <= 4000000) return value * 0.15 - 100000;
+            if (value <= 6000000) return value * 0.2 - 300000;
+            if (value <= 10000000) return value * 0.3 - 900000;
+            if (value <= 15000000) return value * 0.4 - 1900000;
+            if (value <= 30000000) return value * 0.45 - 2650000;
+            if (value <= 45000000) return value * 0.5 - 4150000;
+            return value * 0.55 - 6400000;
+        }
+
+        function calculateInheritanceTax(value) {
+            if (value <= 10000000) return value * 0.1;
+            if (value <= 30000000) return value * 0.15 - 500000;
+            if (value <= 50000000) return value * 0.2 - 2000000;
+            if (value <= 100000000) return value * 0.3 - 7000000;
+            if (value <= 200000000) return value * 0.4 - 17000000;
+            if (value <= 300000000) return value * 0.45 - 27000000;
+            if (value <= 600000000) return value * 0.5 - 42000000;
+            return value * 0.55 - 72000000;
+        }
+
+        function drawChart(labels, giftTaxData, inheritanceTaxData) {
+            const ctx = document.getElementById('chartCanvas').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '贈与税減少率（％）',
+                            data: giftTaxData,
+                            borderColor: '#06AED5',
+                            backgroundColor: '#06AED5',
+                            pointStyle: 'triangle',
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
+                            fill: false,
+                            datalabels: {
+                                color: '#06AED5',
+                                align: 'top',
+                                formatter: function(value) {
+                                    return value.toFixed(2) + '%';
+                                }
+                            }
+                        },
+                        {
+                            label: '相続税減少率（％）',
+                            data: inheritanceTaxData,
+                            borderColor: '#90BE6D',
+                            backgroundColor: '#90BE6D',
+                            pointStyle: 'circle',
+                            pointRadius: 6,
+                            pointHoverRadius: 8,
+                            fill: false,
+                            datalabels: {
+                                color: '#90BE6D',
+                                align: 'top',
+                                formatter: function(value) {
+                                    return value.toFixed(2) + '%';
+                                }
+                            }
+                        }
+                    ]
+                },
+                plugins: [ChartDataLabels],
+                options: {
+                    responsive: true,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(tooltipItem) {
+                                    return `${tooltipItem.raw.toFixed(2)}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: '株価評価減（％）'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: '減少率（％）'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
