@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>相続時精算課税の相続税</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .header {
+            font-weight: bold;
+            text-align: left;
+            font-size: 1.5em;
+        }
+        .sub-header {
+            color: #F94144;
+            text-align: left;
+            font-size: 1.2em;
+        }
+        .input-label {
+            text-align: left;
+            display: block;
+            font-size: 1em;
+            margin: 20px 0 5px 0;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 0; /* 四角形にする */
+            box-sizing: border-box;
+            font-size: 1em;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            border: 1px solid #ccc;
+            border-radius: 0; /* 四角形にする */
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        .result {
+            margin-top: 20px;
+            font-weight: bold;
+            display: none; /* 初期状態で非表示 */
+        }
+        .gift-tax {
+            color: #06AED5; /* ライトブルー */
+        }
+    </style>
+</head>
+<body>
+    <div class="header">相続時精算課税の相続税</div>
+    <div class="sub-header">相続時精算課税ありの場合の贈与税</div>
+    
+    <label for="stockValue" class="input-label">株価評価額を入力して下さい</label>
+    <input type="text" id="stockValue" placeholder="例: 20,000,000">
+    <button onclick="calculateGiftTax()">計算する</button>
+    <div class="result" id="giftTaxContainer">
+        <span class="gift-tax">贈与税額:</span> <span class="gift-tax" id="giftTaxResult">〇円</span>
+    </div>
+
+    <script>
+        function toHalfWidth(str) {
+            return str.replace(/[０-９．]/g, function(ch) {
+                return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
+            });
+        }
+
+        function formatWithCommas(number) {
+            return number.toLocaleString();
+        }
+
+        function calculateGiftTax() {
+            let inputValue = document.getElementById('stockValue').value;
+            inputValue = toHalfWidth(inputValue).replace(/,/g, '');
+
+            const stockValue = parseFloat(inputValue);
+
+            if (isNaN(stockValue) || stockValue <= 0) {
+                alert("正しい金額を入力してください。");
+                return;
+            }
+
+            // 計算式: (A4 - 25,000,000) * 20%
+            const threshold = 25000000;
+            let giftTax = 0;
+
+            if (stockValue > threshold) {
+                giftTax = (stockValue - threshold) * 0.2;
+            }
+
+            document.getElementById('giftTaxResult').textContent = `${formatWithCommas(Math.round(giftTax))}円`;
+            document.getElementById('giftTaxContainer').style.display = "block";
+        }
+    </script>
+</body>
+</html>
